@@ -2,12 +2,16 @@
 # username and password are from the AstraDB GeneratedToken.csv file
 # host is from config.json in the security bundle file
 # secure-connect-vector-test.zip is a security of the target AstraDB
+# pre-requisite:
+# add firewalls rule to allow ssh to the EMR primary node from the desired IPs.
+
+# the following are the configurations for spark-submit with client
+# the main jar and the security bundle: bundle.zip need to be uploaded to the EMR primary node
 #
 
 ./spark-submit --conf spark.cassandra.auth.username=MWivUQjZOJgYZMcYZqmXOXbW \
 --conf spark.cassandra.auth.password=,ChW2-rHiBr.6Nfw_U5fGD64rvdXzWvNs.gRW6eFR0fFT
 .pPDpS1fRdluTjfB-y--aMZFiR3EIUbGkNbcqPFbqr.ZT8gSNjoL+F2OJ_nJQLMQ38TYkG0lHL0EL9Mi9dO \
 --conf spark.cassandra.connection.host=8a36706d-69f0-4bdc-9ed1-822064d3f68d-us-east1.db.astra.datastax.com \
---files
-/path-to-secure-bundle/secure-connect-vector-test.zip \
-/path-to-app-jar/data-migrator-1.0.0-jar-with-dependencies.jar
+--conf spark.files=/home/hadoop/suez/bundle.zip
+--conf spark.cassandra.connection.config.cloud.path=bundle.zip

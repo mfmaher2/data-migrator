@@ -10,8 +10,6 @@ object S3ToAstraDBMigrator {
 
     //Then start spark session
     SparkSession.builder().appName("Spark Job Migrating Data from S3 to Astra DB")
-      .master("local[*]")
-      .config("spark.cassandra.connection.config.cloud.path", "./secure-connect-vector-test.zip")
       .config("spark.sql.catalog.casscatalog", "com.com.datastax.spark.connector.datasource.CassandraCatalog")
       .config("spark.cassandra.output.ignoreNulls", true)
       .withExtensions(new CassandraSparkExtensions).getOrCreate()
@@ -20,7 +18,7 @@ object S3ToAstraDBMigrator {
   private def initS3Access(spark: SparkSession): Unit = {
     val sc = spark.sparkContext
     // credential (need to use new session key and secret since they are transient
-    sc.hadoopConfiguration.set("fs.s3a.access.key", "you-key")
+    sc.hadoopConfiguration.set("fs.s3a.access.key", "your-kye")
     sc.hadoopConfiguration.set("fs.s3a.secret.key", "your-secret")
 
     // the next two line only needed if key and secret are temporary
