@@ -25,8 +25,6 @@ object S3ToAstraDBMigrator {
     dfCurrentValue = dfCurrentValue.drop("data_quality")
 
     //current_Value before write
-    println("Current Value connt:" + dfCurrentValue.count())
-    dfCurrentValue.show
     dfCurrentValue.write.format("org.apache.spark.sql.cassandra")
       .options(Map(
         "keyspace" -> "insight",
@@ -41,8 +39,6 @@ object S3ToAstraDBMigrator {
     val dfTsTable = df.withColumn("yyyymm", concat(year(col("event_time")),
       functions.format_string("%02d", month(col("event_time")))))
 
-    println("TimeSeries connt:" + dfTsTable.count())
-    dfTsTable.show
     // change the table name
     dfTsTable.write.format("org.apache.spark.sql.cassandra")
       .options(Map(
@@ -71,16 +67,12 @@ object S3ToAstraDBMigrator {
     )
     // read recursively from the bucket
     val dfSource = spark.read.option("recursiveFileLookup", "true").schema(schema).parquet(bucketPath)
-    println("Source connt:" + dfSource.count())
-    dfSource.show
     // repartition the df with tag_id and data_quality
     val windowSpec = Window.partitionBy("tag_id",
       "data_quality").orderBy(col("event_time").desc)
 
     val dfTs = dfSource.withColumn("row_number",row_number().over(windowSpec))
       .filter(col("row_number") === 1).drop("row_number")
-    println("TimeSeries connt:" + dfTs.count())
-    dfTs.show
     // write to the time series table
     writeTimeSeriesTbl(dfTs)
     // write to the current value table
