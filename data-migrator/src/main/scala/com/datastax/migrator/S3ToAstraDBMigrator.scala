@@ -64,8 +64,8 @@ object S3ToAstraDBMigrator {
     val schema = StructType(
       List(
         StructField("tag_id", StringType, true),
-        StructField("event_time", TimestampType, true),
         StructField("data_quality", IntegerType, true),
+        StructField("event_time", TimestampType, true),
         StructField("event_value", DoubleType, true)
       )
     )
