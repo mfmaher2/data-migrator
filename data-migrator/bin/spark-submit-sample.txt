@@ -9,9 +9,7 @@
 # the main jar and the security bundle: bundle.zip need to be uploaded to the EMR primary node
 #
 
-./spark-submit --conf spark.cassandra.auth.username=MWivUQjZOJgYZMcYZqmXOXbW \
---conf spark.cassandra.auth.password=,ChW2-rHiBr.6Nfw_U5fGD64rvdXzWvNs.gRW6eFR0fFT
-.pPDpS1fRdluTjfB-y--aMZFiR3EIUbGkNbcqPFbqr.ZT8gSNjoL+F2OJ_nJQLMQ38TYkG0lHL0EL9Mi9dO \
---conf spark.cassandra.connection.host=8a36706d-69f0-4bdc-9ed1-822064d3f68d-us-east1.db.astra.datastax.com \
---conf spark.files=/home/hadoop/suez/bundle.zip
---conf spark.cassandra.connection.config.cloud.path=bundle.zip
+--conf spark.files=/home/hadoop/bundle.zip
+--conf spark.cassandra.connection.config.cloud.path=bundle.zip --properties-file /home/hadoop/job.properties
+/home/hadoop/data-migrator-1.0.0-jar-with-dependencies.jar
+s3a://my-emr-s3-test/

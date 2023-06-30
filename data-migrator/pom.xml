@@ -55,6 +55,15 @@
       <artifactId>joda-time</artifactId>
       <version>${joda.version}</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/hadoop-lzo/hadoop-lzo -->
+    <dependency>
+      <groupId>org.anarres.lzo</groupId>
+      <artifactId>lzo-hadoop</artifactId>
+      <version>1.0.6</version>
+    </dependency>
+    <!-- Thanks for using https://jar-download.com -->
+
+
   </dependencies>
 
   <repositories>

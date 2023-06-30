@@ -1,8 +1,10 @@
 package com.datastax.migrator
 
 import com.datastax.spark.connector.CassandraSparkExtensions
-import org.apache.spark.sql.{SaveMode, SparkSession, functions}
-import org.apache.spark.sql.functions.{col, concat, month, year}
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession, functions}
+import org.apache.spark.sql.functions.{col, concat, instr, month, rank, row_number, substring, substring_index, year}
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType, TimestampType}
 
 
 object S3ToAstraDBMigrator {
@@ -15,40 +17,74 @@ object S3ToAstraDBMigrator {
       .withExtensions(new CassandraSparkExtensions).getOrCreate()
   }
 
-  private def initS3Access(spark: SparkSession): Unit = {
-    val sc = spark.sparkContext
-    // credential (need to use new session key and secret since they are transient
-    sc.hadoopConfiguration.set("fs.s3a.access.key", "your-kye")
-    sc.hadoopConfiguration.set("fs.s3a.secret.key", "your-secret")
+  private def writeToCurrentValueTbl(df: DataFrame): Unit = {
+    // only keep data_quality != 0
+    var dfCurrentValue = df.filter(col("data_quality") =!= 0)
+    dfCurrentValue = dfCurrentValue.withColumn("asset_id",
+      substring_index(col("tag_id"),".",1))
+    dfCurrentValue = dfCurrentValue.drop("data_quality")
 
-    // the next two line only needed if key and secret are temporary
-    sc.hadoopConfiguration.set("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider")
-    sc.hadoopConfiguration.set("fs.s3a.session.token", "your-token")
-  }
-  def main(args: Array[String]): Unit = {
-    val spark: SparkSession = initSpark()
-    initS3Access(spark)
-
-    // Specify your bucket
-    val bucketPath = "s3a://my-emr-s3-test/"
-
-    // Read all CSV files
-    var df = spark.read.format("csv")
-      .option("header", "true")
-      .option("recursiveFileLookup", "true")
-      .load(bucketPath)
-
-    // Add a new column yyyymm with yyyy and mm parsed from the event_time column
-    df = df.withColumn("yyyymm", concat(year(col("event_time")),
-      functions.format_string("%02d", month(col("event_time")))))
-
-    df.write.format("org.apache.spark.sql.cassandra")
+    //current_Value before write
+    println("Current Value connt:" + dfCurrentValue.count())
+    dfCurrentValue.show
+    dfCurrentValue.write.format("org.apache.spark.sql.cassandra")
       .options(Map(
         "keyspace" -> "insight",
-        "table" -> "insight_ts_new"
+        "table" -> "current_value"
       ))
       .mode(SaveMode.Append)
       .save
+  }
+
+  private def writeTimeSeriesTbl(df: DataFrame): Unit = {
+    // Add a new column yyyymm with yyyy and mm parsed from the event_time column
+    val dfTsTable = df.withColumn("yyyymm", concat(year(col("event_time")),
+      functions.format_string("%02d", month(col("event_time")))))
+
+    println("TimeSeries connt:" + dfTsTable.count())
+    dfTsTable.show
+    // change the table name
+    dfTsTable.write.format("org.apache.spark.sql.cassandra")
+      .options(Map(
+        "keyspace" -> "insight",
+        "table" -> "timeseries_raw"
+      ))
+      .mode(SaveMode.Append)
+      .save
+  }
+  def main(args: Array[String]): Unit = {
+    val spark: SparkSession = initSpark
+
+
+    // Specify your bucket
+    val bucketPath = args(0)
+
+    // Read all parquet
+    // Define the schema
+    val schema = StructType(
+      List(
+        StructField("tag_id", StringType, true),
+        StructField("event_time", TimestampType, true),
+        StructField("data_quality", IntegerType, true),
+        StructField("event_value", DoubleType, true)
+      )
+    )
+    // read recursively from the bucket
+    val dfSource = spark.read.option("recursiveFileLookup", "true").schema(schema).parquet(bucketPath)
+    println("Source connt:" + dfSource.count())
+    dfSource.show
+    // repartition the df with tag_id and data_quality
+    val windowSpec = Window.partitionBy("tag_id",
+      "data_quality").orderBy(col("event_time").desc)
+
+    val dfTs = dfSource.withColumn("row_number",row_number().over(windowSpec))
+      .filter(col("row_number") === 1).drop("row_number")
+    println("TimeSeries connt:" + dfTs.count())
+    dfTs.show
+    // write to the time series table
+    writeTimeSeriesTbl(dfTs)
+    // write to the current value table
+    writeToCurrentValueTbl(dfTs)
     spark.stop()
   }
 }
