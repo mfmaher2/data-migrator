@@ -24,14 +24,19 @@ object S3ToAstraDBMigrator {
       substring_index(col("tag_id"),".",1))
     dfCurrentValue = dfCurrentValue.drop("data_quality")
 
-    //current_Value before write
-    dfCurrentValue.write.format("org.apache.spark.sql.cassandra")
-      .options(Map(
-        "keyspace" -> "insight",
-        "table" -> "current_value"
-      ))
-      .mode(SaveMode.Append)
-      .save
+    try {
+      //current_Value before write
+      dfCurrentValue.write.format("org.apache.spark.sql.cassandra")
+        .options(Map(
+          "keyspace" -> "insight",
+          "table" -> "current_value"
+        ))
+        .mode(SaveMode.Append)
+        .save
+    } catch {
+      case e: Exception =>
+        println(s"An error occurred: ${e.getMessage}")
+    }
   }
 
   private def writeTimeSeriesTbl(df: DataFrame): Unit = {
@@ -39,18 +44,23 @@ object S3ToAstraDBMigrator {
     val dfTsTable = df.withColumn("yyyymm", concat(year(col("event_time")),
       functions.format_string("%02d", month(col("event_time")))))
 
-    // change the table name
-    dfTsTable.write.format("org.apache.spark.sql.cassandra")
-      .options(Map(
-        "keyspace" -> "insight",
-        "table" -> "timeseries_raw"
-      ))
-      .mode(SaveMode.Append)
-      .save
+    try {
+      // change the table name
+      dfTsTable.write.format("org.apache.spark.sql.cassandra")
+        .options(Map(
+          "keyspace" -> "insight",
+          "table" -> "timeseries_raw"
+        ))
+        .mode(SaveMode.Append)
+        .save
+    } catch {
+      case e: Exception =>
+        println(s"An error occurred: ${e.getMessage}")
+    }
   }
+
   def main(args: Array[String]): Unit = {
    val spark: SparkSession = initSpark
-
 
     // Specify your bucket
     val bucketPath = args(0)
