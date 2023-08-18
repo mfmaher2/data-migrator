@@ -44,7 +44,6 @@ object S3ToAstraDBMigrator {
     val dfTsTable = df.withColumn("yyyymm", concat(year(col("event_time")),
       functions.format_string("%02d", month(col("event_time")))))
 
-    try {
       // change the table name
       dfTsTable.write.format("org.apache.spark.sql.cassandra")
         .options(Map(
@@ -53,10 +52,6 @@ object S3ToAstraDBMigrator {
         ))
         .mode(SaveMode.Append)
         .save
-    } catch {
-      case e: Exception =>
-        println(s"An error occurred: ${e.getMessage}")
-    }
   }
 
   def main(args: Array[String]): Unit = {
