@@ -49,7 +49,7 @@ object S3ToAstraDBMigrator {
       .save
   }
   def main(args: Array[String]): Unit = {
-    val spark: SparkSession = initSpark
+   val spark: SparkSession = initSpark
 
 
     // Specify your bucket
@@ -67,6 +67,16 @@ object S3ToAstraDBMigrator {
     )
     // read recursively from the bucket
     val dfSource = spark.read.option("recursiveFileLookup", "true").schema(schema).parquet(bucketPath)
+
+    // Check and log records with null tag_id
+    val nullTagIdRecords = dfSource.filter(col("tag_id").isNull)
+    if (nullTagIdRecords.count > 0) {
+      println("Records with null tag_id:")
+      nullTagIdRecords.show()
+    } else {
+      println("No records with null tag_id found.")
+    }
+
     // repartition the df with tag_id and data_quality
     val windowSpec = Window.partitionBy("tag_id",
       "data_quality").orderBy(col("event_time").desc)
