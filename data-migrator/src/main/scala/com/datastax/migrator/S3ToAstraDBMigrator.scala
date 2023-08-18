@@ -96,10 +96,11 @@ object S3ToAstraDBMigrator {
 
     val dfTs = filteredDf.withColumn("row_number",row_number().over(windowSpec))
       .filter(col("row_number") === 1).drop("row_number")
+
     // write to the time series table
     writeTimeSeriesTbl(dfTs)
     // write to the current value table
-    writeToCurrentValueTbl(dfTs)
+//    writeToCurrentValueTbl(dfTs)
     spark.stop()
   }
 }
