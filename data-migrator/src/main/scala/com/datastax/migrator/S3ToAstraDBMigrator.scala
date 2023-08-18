@@ -77,11 +77,14 @@ object S3ToAstraDBMigrator {
       println("No records with null tag_id found.")
     }
 
+    // Filter out records with null tag_id
+    val filteredDf = dfSource.filter(col("tag_id").isNotNull)
+
     // repartition the df with tag_id and data_quality
     val windowSpec = Window.partitionBy("tag_id",
       "data_quality").orderBy(col("event_time").desc)
 
-    val dfTs = dfSource.withColumn("row_number",row_number().over(windowSpec))
+    val dfTs = filteredDf.withColumn("row_number",row_number().over(windowSpec))
       .filter(col("row_number") === 1).drop("row_number")
     // write to the time series table
     writeTimeSeriesTbl(dfTs)
