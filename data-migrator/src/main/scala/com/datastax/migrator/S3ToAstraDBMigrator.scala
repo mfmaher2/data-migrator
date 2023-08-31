@@ -24,7 +24,6 @@ object S3ToAstraDBMigrator {
       substring_index(col("tag_id"),".",1))
     dfCurrentValue = dfCurrentValue.drop("data_quality")
 
-    try {
       //current_Value before write
       dfCurrentValue.write.format("org.apache.spark.sql.cassandra")
         .options(Map(
@@ -33,10 +32,6 @@ object S3ToAstraDBMigrator {
         ))
         .mode(SaveMode.Append)
         .save
-    } catch {
-      case e: Exception =>
-        println(s"An error occurred: ${e.getMessage}")
-    }
   }
 
   private def writeTimeSeriesTbl(df: DataFrame): Unit = {
@@ -84,16 +79,18 @@ object S3ToAstraDBMigrator {
 
     // Filter out records with null tag_id
     val filteredDf = dfSource.filter(col("tag_id").isNotNull)
+    // Sort the dataframe by "tag_id", "data_quality", and "event_time" descending
+    val dfSorted = filteredDf.orderBy(col("tag_id"), col("data_quality"), col("event_time").desc)
 
     // repartition the df with tag_id and data_quality
-    val windowSpec = Window.partitionBy("tag_id",
-      "data_quality").orderBy(col("event_time").desc)
+//    val windowSpec = Window.partitionBy("tag_id",
+//      "data_quality").orderBy(col("event_time").desc)
 
-    val dfTs = filteredDf.withColumn("row_number",row_number().over(windowSpec))
-      .filter(col("row_number") === 1).drop("row_number")
+//    val dfTs = dfSource.withColumn("row_number",row_number().over(windowSpec))
+//      .filter(col("row_number") === 1).drop("row_number")
 
     // write to the time series table
-    writeTimeSeriesTbl(dfTs)
+    writeTimeSeriesTbl(dfSorted)
     // write to the current value table
 //    writeToCurrentValueTbl(dfTs)
     spark.stop()
