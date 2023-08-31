@@ -76,11 +76,21 @@ object S3ToAstraDBMigrator {
     } else {
       println("No records with null tag_id found.")
     }
+    
+    // Check and log records with null tag_id
+    val nullDQRecords = dfSource.filter(col("data_quality").isNull)
+    if (nullDQRecords.count > 0) {
+      println("Records with null data_quality:")
+      nullDQRecords.show()
+    } else {
+      println("No records with null data_quality found.")
+    }
+    
 
     // Filter out records with null tag_id
-    val filteredDf = dfSource.filter(col("tag_id").isNotNull)
     // Sort the dataframe by "tag_id", "data_quality", and "event_time" descending
-    val dfSorted = filteredDf.orderBy(col("tag_id"), col("data_quality"), col("event_time").desc)
+    val dfSorted = dfSource.filter(col("tag_id").isNotNull).filter(col("data_quality").isNotNull)
+                    .orderBy(col("tag_id"), col("data_quality"), col("event_time").desc)
 
     // repartition the df with tag_id and data_quality
 //    val windowSpec = Window.partitionBy("tag_id",
