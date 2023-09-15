@@ -66,6 +66,18 @@ object DSEToAstraDBMigrator {
   def main(args: Array[String]): Unit = {
     val spark: SparkSession = initSpark()
 
+    // Specify your bucket
+    val bucketPath = args(8)
+
+    // Read all parquet
+    // Define the schema
+    val schema = StructType(List(StructField("tag_id", StringType, true)))
+
+    // read recursively from the bucket
+    val dfSource = spark.read.option("recursiveFileLookup", "true").schema(schema).parquet(bucketPath)
+
+    val tagdf = dfSource.filter(col("tag_id").isNotNull)
+
     // load dataframe from insight_daily_ts
     val dailydf = spark.read.format("org.apache.spark.sql.cassandra")
       .option("spark.cassandra.connection.host", args(0))
@@ -74,7 +86,14 @@ object DSEToAstraDBMigrator {
       .option("spark.cassandra.auth.password", args(3))
       .option("keyspace","insight_test").option("table", "insight_daily_ts").load()
 
-//    println("Daily count: " + dailydf.count())
+    // Create a new DataFrame with only the tag_id column from tagdf
+    val tagIdDF = tagdf.select("tag_id").distinct()
+
+    // Perform an inner join on the tag_id column to get rows that are present in both DataFrames
+    val resultdailyDF = dailydf.join(tagIdDF, "tag_id")
+
+    println("Daily count: " + dailydf.count())
+    println("Filtered Daily count: " + resultdailyDF.count())
 
     val scb = args(4)
     val host = args(5)
@@ -82,7 +101,7 @@ object DSEToAstraDBMigrator {
     val tokenpwd = args(7)
 
     // write to the daily table
-    writeToDailyTbl(dailydf, scb, host, clientid, tokenpwd)
+    writeToDailyTbl(resultdailyDF, scb, host, clientid, tokenpwd)
 
     // load dataframe from insight_hourly_ts
     val hourlydf = spark.read.format("org.apache.spark.sql.cassandra")
@@ -94,8 +113,10 @@ object DSEToAstraDBMigrator {
 
 //    println("Hourly count: " + hourlydf.count())
 
+    // Perform an inner join on the tag_id column to get rows that are present in both DataFrames
+    val resulthourlyDF = hourlydf.join(tagIdDF, "tag_id")
     // write to the hourly table
-    writeToHourlyTbl(hourlydf, scb, host, clientid, tokenpwd)
+    writeToHourlyTbl(resulthourlyDF, scb, host, clientid, tokenpwd)
 
     spark.stop()
   }
