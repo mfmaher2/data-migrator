@@ -7,9 +7,19 @@
 
 # the following are the configurations for spark-submit with client
 # the main jar and the security bundle: bundle.zip need to be uploaded to the EMR primary node
-#
+# S3ToAstraDBMigrator
 
 --conf spark.files=/home/hadoop/bundle.zip
 --conf spark.cassandra.connection.config.cloud.path=bundle.zip --properties-file /home/hadoop/job.properties
 /home/hadoop/data-migrator-1.0.0-jar-with-dependencies.jar
 s3a://my-emr-s3-test/
+
+# DSEToAstraDBMigrator
+nohup ./spark-submit \
+--conf spark.files=/Users/mike.maher/Documents/dev/demo/ks1/secure-connect-ks1.zip \
+--class com.datastax.migrator.DSEToAstraDBMigrator \
+/home/hadoop/data-migrator-2.0.0-jar-with-dependencies.jar \
+"dsehost" "dseport" "cassandrauser" "cassandrapwd" "bundle.zip" \
+"astrahost" \
+"astraclientid" \
+"astratokenpwd" > /Users/mike.maher/Documents/dev/demo/ks1/migrations.txt &
