@@ -92,8 +92,8 @@ object DSEToAstraDBMigrator {
     // Perform an inner join on the tag_id column to get rows that are present in both DataFrames
     val resultdailyDF = dailydf.join(tagIdDF, "tag_id")
 
-    println("Daily count: " + dailydf.count())
-    println("Filtered Daily count: " + resultdailyDF.count())
+//    println("Daily count: " + dailydf.count())
+//    println("Filtered Daily count: " + resultdailyDF.count())
 
     val scb = args(4)
     val host = args(5)
