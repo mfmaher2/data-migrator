@@ -19,12 +19,12 @@ object DSEToAstraDBMigrator {
   }
 
   private def writeToDailyTbl(df: DataFrame, scb: String, host: String, clientid: String, tokenpwd: String): Unit = {
-    // Convert the event_day column to a date type
-    val dfWithDate = df.withColumn("event_day", to_date(from_unixtime(col("event_day"))))
 
-    // Add a new column yyyymm with yyyy and mm parsed from the event_day column
-    val dfTsTable = dfWithDate.withColumn("yyyy", concat(year(col("event_day")),
-      format_string("%02d", month(col("event_day")))))
+    val dfWithEventDay = df.withColumn("event_day",
+      floor(unix_timestamp(col("latest_time")) / 86400))
+
+    // Add a new column yyyy with just the year parsed from the event_day column
+    val dfTsTable = dfWithEventDay.withColumn("yyyy", year(col("latest_time")))
 
     // write to insight_timeseries_daily in astra
     dfTsTable.write.format("org.apache.spark.sql.cassandra")
@@ -42,10 +42,10 @@ object DSEToAstraDBMigrator {
 
   private def writeToHourlyTbl(df: DataFrame, scb: String, host: String, clientid: String, tokenpwd: String): Unit = {
     // Convert the event_hour column to a date type
-    val dfWithDate = df.withColumn("event_hour", to_date(from_unixtime(col("event_hour"))))
+    val dfWithDate = df.withColumn("event_hour", to_date(from_unixtime(col("latest_time"))))
 
     // Add a new column yyyymm with yyyy and mm parsed from the event_hour column
-    val dfTsTable = dfWithDate.withColumn("yyyymm", concat(year(col("event_hour")),
+    val dfTsTable = dfWithDate.withColumn("yyyymm", concat(year(col("latest_time")),
       format_string("%02d", month(col("event_hour")))))
 
     // write to insight_timeseries_hourly in astra
@@ -70,7 +70,6 @@ object DSEToAstraDBMigrator {
     val bucketPath = args(8)
 
     // Read all parquet
-    // Define the schema
     val schema = StructType(List(StructField("tag_id", StringType, true)))
 
     // read recursively from the bucket
@@ -101,7 +100,7 @@ object DSEToAstraDBMigrator {
     val tokenpwd = args(7)
 
     // write to the daily table
-    writeToDailyTbl(resultdailyDF, scb, host, clientid, tokenpwd)
+    writeToDailyTbl(dailydf, scb, host, clientid, tokenpwd)
 
     // load dataframe from insight_hourly_ts
     val hourlydf = spark.read.format("org.apache.spark.sql.cassandra")
