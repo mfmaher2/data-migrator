@@ -84,6 +84,9 @@ object DSEToAstraDBMigrator {
       .option("spark.cassandra.auth.password", args(3))
       .option("keyspace", sourceKeySpace).option("table", "insight_daily_ts").load()
 
+    val filteredDF = dailydf.filter(col("latest_time") >= "2013-01-01 00:00")
+
+//    filteredDF.show(5,false)
     // Create a new DataFrame with only the tag_id column from tagdf
     val tagIdDF = tagdf.select("tag_id").distinct()
 
