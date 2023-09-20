@@ -42,7 +42,7 @@ object DSEToAstraDBMigrator {
 
   private def writeToHourlyTbl(df: DataFrame, scb: String, host: String, clientid: String, tokenpwd: String): Unit = {
     // Add a new column yyyymm with yyyy and mm parsed from the event_hour column
-    val dfTsTable = dfWithDate.withColumn("yyyymm", concat(year(col("latest_time")),
+    val dfTsTable = df.withColumn("yyyymm", concat(year(col("latest_time")),
       format_string("%02d", month(col("latest_time")))))
 
     // write to insight_timeseries_hourly in astra
@@ -74,7 +74,7 @@ object DSEToAstraDBMigrator {
 
     val tagdf = dfSource.filter(col("tag_id").isNotNull)
 
-    vale sourceKeySpace = args(8)
+    val sourceKeySpace = args(8)
 
     // load dataframe from insight_daily_ts
     val dailydf = spark.read.format("org.apache.spark.sql.cassandra")
