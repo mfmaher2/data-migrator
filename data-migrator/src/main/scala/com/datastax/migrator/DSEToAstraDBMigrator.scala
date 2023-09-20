@@ -41,14 +41,6 @@ object DSEToAstraDBMigrator {
   }
 
   private def writeToHourlyTbl(df: DataFrame, scb: String, host: String, clientid: String, tokenpwd: String): Unit = {
-    // Convert the event_hour column to a date type
-    val dfWithDate = df.withColumn("event_hour",
-      format_string("%02d%02d%02d",
-        year(col("latest_time")) - 2000,
-        month(col("latest_time")),
-        dayofmonth(col("latest_time"))
-      ))
-
     // Add a new column yyyymm with yyyy and mm parsed from the event_hour column
     val dfTsTable = dfWithDate.withColumn("yyyymm", concat(year(col("latest_time")),
       format_string("%02d", month(col("latest_time")))))
@@ -72,7 +64,7 @@ object DSEToAstraDBMigrator {
     val spark: SparkSession = initSpark()
 
     // Specify your bucket
-    val bucketPath = args(8)
+    val bucketPath = args(9)
 
     // Read all parquet
     val schema = StructType(List(StructField("tag_id", StringType, true)))
@@ -82,13 +74,15 @@ object DSEToAstraDBMigrator {
 
     val tagdf = dfSource.filter(col("tag_id").isNotNull)
 
+    vale sourceKeySpace = args(8)
+
     // load dataframe from insight_daily_ts
     val dailydf = spark.read.format("org.apache.spark.sql.cassandra")
       .option("spark.cassandra.connection.host", args(0))
       .option("spark.cassandra.connection.port", args(1))
       .option("spark.cassandra.auth.username", args(2))
       .option("spark.cassandra.auth.password", args(3))
-      .option("keyspace","insight_test").option("table", "insight_daily_ts").load()
+      .option("keyspace", sourceKeySpace).option("table", "insight_daily_ts").load()
 
     // Create a new DataFrame with only the tag_id column from tagdf
     val tagIdDF = tagdf.select("tag_id").distinct()
@@ -113,7 +107,7 @@ object DSEToAstraDBMigrator {
       .option("spark.cassandra.connection.port", args(1))
       .option("spark.cassandra.auth.username", args(2))
       .option("spark.cassandra.auth.password", args(3))
-      .option("keyspace", "insight_test").option("table", "insight_hourly_ts").load()
+      .option("keyspace", sourceKeySpace).option("table", "insight_hourly_ts").load()
 
 //    println("Hourly count: " + hourlydf.count())
 
