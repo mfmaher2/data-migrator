@@ -84,14 +84,15 @@ object DSEToAstraDBMigrator {
       .option("spark.cassandra.auth.password", args(3))
       .option("keyspace", sourceKeySpace).option("table", "insight_daily_ts").load()
 
-    val filteredDF = dailydf.filter(col("latest_time") >= "2013-01-01 00:00")
+    // Filter out any data before 2013-01-01
+    val filteredDailyDF = dailydf.filter(col("latest_time") >= "2013-01-01 00:00")
 
 //    filteredDF.show(5,false)
     // Create a new DataFrame with only the tag_id column from tagdf
     val tagIdDF = tagdf.select("tag_id").distinct()
 
     // Perform an inner join on the tag_id column to get rows that are present in both DataFrames
-    val resultdailyDF = dailydf.join(tagIdDF, "tag_id")
+    val resultdailyDF = filteredDailyDF.join(tagIdDF, "tag_id")
 
 //    println("Daily count: " + dailydf.count())
 //    println("Filtered Daily count: " + resultdailyDF.count())
@@ -114,8 +115,11 @@ object DSEToAstraDBMigrator {
 
 //    println("Hourly count: " + hourlydf.count())
 
+    // Filter out any data before 2013-01-01
+    val filteredHourlyDF = hourlydf.filter(col("latest_time") >= "2013-01-01 00:00")
+
     // Perform an inner join on the tag_id column to get rows that are present in both DataFrames
-    val resulthourlyDF = hourlydf.join(tagIdDF, "tag_id")
+    val resulthourlyDF = filteredHourlyDF.join(tagIdDF, "tag_id")
     // write to the hourly table
     writeToHourlyTbl(resulthourlyDF, scb, host, clientid, tokenpwd)
 
