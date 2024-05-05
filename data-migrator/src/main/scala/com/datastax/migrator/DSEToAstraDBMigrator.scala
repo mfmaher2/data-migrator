@@ -82,7 +82,7 @@ object DSEToAstraDBMigrator {
       .option("spark.cassandra.connection.port", args(1))
       .option("spark.cassandra.auth.username", args(2))
       .option("spark.cassandra.auth.password", args(3))
-      .option("keyspace", sourceKeySpace).option("table", "insight_daily_ts").load()
+      .option("keyspace", sourceKeySpace).option("table", "gc_machine_presentation_audit_raw").load()
 
     // Filter out any data before 2013-01-01
     val filteredDailyDF = dailydf.filter(col("latest_time") >= "2013-01-01 00:00")
